@@ -11,6 +11,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
 from pathlib import Path
+import os
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +22,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=)f#yei$iz^i(_d_2f%h7)#0xt3f&!d+1ds4$3^b6%9x*m1c#7'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-=)f#yei$iz^i(_d_2f%h7)#0xt3f&!d+1ds4$3^b6%9x*m1c#7')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -37,6 +39,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders', 
+    'rest_framework',
+    'users',
+    'rest_framework_simplejwt.token_blacklist',  # Para blacklisting de tokens
 ]
 
 MIDDLEWARE = [
@@ -121,3 +127,32 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
+}
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=15),  # Token de acesso expira em 15 minutos
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),     # Token de refresh expira em 1 dia
+    'ROTATE_REFRESH_TOKENS': False,                  # Se True, gera novo refresh token quando refreshed
+    'BLACKLIST_AFTER_ROTATION': True,                # Se True, coloca token antigo na blacklist após refresh
+    
+    'ALGORITHM': 'HS256',                            # Algoritmo de assinatura
+    'SIGNING_KEY': SECRET_KEY,                       # Chave usada para assinar
+    'VERIFYING_KEY': None,                           # Chave de verificação se diferente da chave de assinatura
+    
+    'AUTH_HEADER_TYPES': ('Bearer',),                # Tipo de cabeçalho de autenticação
+    'USER_ID_FIELD': 'id',                           # Campo do modelo de usuário que serve como identificador único
+    'USER_ID_CLAIM': 'user_id',                      # Nome do claim que armazena o ID do usuário
+
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+}
+
+AUTH_USER_MODEL = 'users.User'

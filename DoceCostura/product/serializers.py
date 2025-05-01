@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Product, Category
+from .models import Product, Category, CartItem, Cart
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -51,3 +51,35 @@ class ProductMinimalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         fields = ['id', 'name', 'price', 'stock']
+
+class CartItemSerializer(serializers.ModelSerializer):
+    product = ProductMinimalSerializer(read_only=True)
+    product_id = serializers.PrimaryKeyRelatedField(
+        queryset=Product.objects.all(),
+        write_only=True,
+        source='product'
+    )
+    line_total = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
+    
+    class Meta:
+        model = CartItem
+        fields = ['id', 'product', 'product_id', 'quantity', 'line_total', 'added_at']
+
+class CartSerializer(serializers.ModelSerializer):
+    items = CartItemSerializer(many=True, read_only=True)
+    subtotal = serializers.DecimalField(
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
+    total_items = serializers.IntegerField(read_only=True)
+    
+    class Meta:
+        model = Cart
+        fields = ['id', 'user_id', 'items', 'subtotal', 'total_items', 
+                  'created_at', 'updated_at', 'is_active']
+        read_only_fields = ['user_id', 'created_at', 'updated_at']

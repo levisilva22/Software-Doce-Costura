@@ -51,8 +51,7 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'gateway.middleware.GatewayMiddleware',  # Middleware do gateway
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',    
 ]
 
 # Configurações do REST Framework

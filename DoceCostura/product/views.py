@@ -2,14 +2,14 @@ from django.shortcuts import render
 from rest_framework import viewsets, filters, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated, IsAuthenticatedOrReadOnly
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Product, Category
+from .models import Product, Category, Cart, CartItem
+from .permissions import MicroservicePermission
 from .serializers import (
     ProductSerializer,
     ProductListSerializer, 
     CategorySerializer,
-    ProductMinimalSerializer
+    CartSerializer
 )
 
 class CategoryViewSet(viewsets.ModelViewSet):
@@ -19,7 +19,7 @@ class CategoryViewSet(viewsets.ModelViewSet):
     """
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [MicroservicePermission]
     filter_backends = [filters.SearchFilter] # Adiciona filtro de pesquisa
     search_fields = ['name']
 
@@ -31,7 +31,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [MicroservicePermission]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_featured']
     search_fields = ['name', 'description', 'sku']
@@ -53,14 +53,14 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         # Em um microserviço real, este ID viria do token JWT
         # Por enquanto, vamos usar um valor fixo para teste
-        creator_id = getattr(self.request.user, 'id', 1)  # Valor padrão 1 para testes
+        creator_id = self.request.user_data.get('id', 1)
         serializer.save(creator_id=creator_id)
     
     def perform_update(self, serializer):
         """
         Adiciona o ID do último modificador quando o produto é atualizado.
         """
-        modifier_id = getattr(self.request.user, 'id', 1)  # Valor padrão 1 para testes
+        modifier_id = self.request.user_data.get('id', 1)  # Valor padrão 1 para testes
         serializer.save(last_modified_by=modifier_id)
     
     @action(detail=True, methods=['post'])
@@ -121,6 +121,12 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         product = self.get_object()
         quantity = request.data.get('quantity', 0)
+
+        roles = request.user_data.get('roles', [])
+
+        if 'is_superuser' not in roles:
+            return Response({'error': 'Apenas administradores podem atualizar o estoque'},
+                            status = status.HTTP_403_FORBIDDEN) 
         
         if not isinstance(quantity, int):
             return Response(
@@ -139,3 +145,238 @@ class ProductViewSet(viewsets.ModelViewSet):
         product.save()
         serializer = self.get_serializer(product)
         return Response(serializer.data)
+
+
+class CartViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet para gerenciar o carrinho de compras.
+    """
+    queryset = Cart.objects.all()
+    serializer_class = CartSerializer
+    permission_classes = [MicroservicePermission]
+
+    def get_queryset(self):
+        """
+        Retorna apenas o carrinho do usuário atual.
+        """
+        user_id = self.request.user_data.get('id')
+        if user_id:
+            return Cart.objects.filter(user_id=user_id, is_active=True)
+        return Cart.objects.none()
+
+    def create(self, request, *args, **kwargs):
+        """
+        Cria um novo carrinho para o usuário se não existir.
+        """
+        user_id = request.user_data.get('id')
+        if not user_id:
+            return Response(
+                {"error": "Usuário não autenticado"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        # Verificar se o usuário já tem um carrinho ativo
+        existing_cart = Cart.objects.filter(user_id=user_id, is_active=True).first()
+        if existing_cart:
+            serializer = self.get_serializer(existing_cart)
+            return Response(serializer.data)
+            
+        # Criar um novo carrinho
+        cart = Cart.objects.create(user_id=user_id)
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
+    @action(detail=False, methods=['post'])
+    def add_item(self, request):
+        """
+        Adiciona um produto ao carrinho ou atualiza sua quantidade.
+        """
+        user_id = request.user_data.get('id')
+        if not user_id:
+            return Response(
+                {"error": "Usuário não autenticado"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        # Obter ou criar o carrinho do usuário
+        cart, created = Cart.objects.get_or_create(
+            user_id=user_id, 
+            is_active=True
+        )
+        
+        # Validar produto
+        product_id = request.data.get('product_id')
+        quantity = int(request.data.get('quantity', 1))
+        
+        try:
+            product = Product.objects.get(id=product_id, is_active=True)
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Produto não encontrado"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Verificar estoque
+        if product.stock < quantity:
+            return Response(
+                {"error": "Quantidade solicitada não disponível em estoque"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Adicionar ou atualizar item no carrinho
+        cart_item, created = CartItem.objects.get_or_create(
+            cart=cart,
+            product=product,
+            defaults={'quantity': quantity}
+        )
+        
+        if not created:
+            # Se o item já existir, atualiza a quantidade
+            cart_item.quantity += quantity
+            
+            # Verificar estoque novamente após aumentar quantidade
+            if product.stock < cart_item.quantity:
+                return Response(
+                    {"error": "Quantidade solicitada não disponível em estoque"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            cart_item.save()
+            
+        # Atualizar timestamp do carrinho
+        cart.save()
+        
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def update_item(self, request):
+        """
+        Atualiza a quantidade de um item no carrinho.
+        """
+        user_id = self.request.user_data.get('id')
+        if not user_id:
+            return Response(
+                {"error": "Usuário não autenticado"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        product_id = request.data.get('product_id')
+        quantity = int(request.data.get('quantity', 1))
+        
+        # Validar quantidade
+        if quantity < 0:
+            return Response(
+                {"error": "A quantidade deve ser maior ou igual a zero"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        try:
+            cart = Cart.objects.get(user_id=user_id, is_active=True)
+        except Cart.DoesNotExist:
+            return Response(
+                {"error": "Carrinho não encontrado"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        try:
+            product = Product.objects.get(id=product_id, is_active=True)
+        except Product.DoesNotExist:
+            return Response(
+                {"error": "Produto não encontrado"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Se quantidade for zero, remover item
+        if quantity == 0:
+            CartItem.objects.filter(cart=cart, product=product).delete()
+        else:
+            # Verificar estoque
+            if product.stock < quantity:
+                return Response(
+                    {"error": "Quantidade solicitada não disponível em estoque"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Atualizar ou criar item
+            cart_item, created = CartItem.objects.update_or_create(
+                cart=cart,
+                product=product,
+                defaults={'quantity': quantity}
+            )
+        
+        # Atualizar timestamp do carrinho
+        cart.save()
+        
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def remove_item(self, request):
+        """
+        Remove um produto do carrinho.
+        """
+        user_id = self.request.user_data.get('id')
+        if not user_id:
+            return Response(
+                {"error": "Usuário não autenticado"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        product_id = request.data.get('product_id')
+        
+        try:
+            cart = Cart.objects.get(user_id=user_id, is_active=True)
+        except Cart.DoesNotExist:
+            return Response(
+                {"error": "Carrinho não encontrado"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Remover item
+        deleted, _ = CartItem.objects.filter(
+            cart=cart, 
+            product_id=product_id
+        ).delete()
+        
+        if deleted == 0:
+            return Response(
+                {"error": "Item não encontrado no carrinho"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Atualizar timestamp do carrinho
+        cart.save()
+        
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'])
+    def clear(self, request):
+        """
+        Remove todos os itens do carrinho.
+        """
+        user_id = self.request.user_data.get('id')
+        if not user_id:
+            return Response(
+                {"error": "Usuário não autenticado"}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        try:
+            cart = Cart.objects.get(user_id=user_id, is_active=True)
+        except Cart.DoesNotExist:
+            return Response(
+                {"error": "Carrinho não encontrado"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+            
+        # Remover todos os itens
+        cart.items.all().delete()
+        
+        # Atualizar timestamp do carrinho
+        cart.save()
+        
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+

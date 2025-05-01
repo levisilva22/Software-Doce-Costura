@@ -1,4 +1,5 @@
 from django.db import models
+from django.urls import reverse
 
 class Category(models.Model):
     name = models.CharField(max_length=100)
@@ -37,23 +38,42 @@ class Product(models.Model):
         return self.stock > 0
         
     def get_absolute_url(self):
-        from django.urls import reverse
         return reverse('product-detail', kwargs={'pk': self.pk})
 
 class Cart(models.Model):
     user_id = models.IntegerField(null=False)
-    products = models.ManyToManyField(Product, through = 'Cart')
-    price = models.DecimalField(max_digits=10, decimal_places=2)
-    delivery = models.DecimalField(max_digits=10, decimal_places=2)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
-
-
+    
     def __str__(self):
         return f"Cart of user {self.user_id}" 
     
     class Meta:
         indexes = [
-                models.Index(fields=('user_id', 'is_activate')), 
+                models.Index(fields=('user_id', 'is_active')), 
         ]
+        
+    @property
+    def subtotal(self):
+        """Calcula o valor total dos itens no carrinho"""
+        return sum(item.line_total for item in self.items.all())
+        
+    @property
+    def total_items(self):
+        """Retorna o número total de itens no carrinho"""
+        return self.items.count()
+
+class CartItem(models.Model):
+    cart = models.ForeignKey(Cart, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quantity = models.PositiveIntegerField(default=1)
+    added_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = ('cart', 'product')
+        
+    @property
+    def line_total(self):
+        """Calcula o preço total deste item (quantidade * preço)"""
+        return self.quantity * self.product.price

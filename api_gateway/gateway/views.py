@@ -89,3 +89,41 @@ class ProductsView(APIView):
         if 'Authorization' in request.headers:
             headers['Authorization'] = request.headers['Authorization']
         return headers
+
+
+class PaymentProxyView(APIView):
+    """View para encaminhar requisições ao serviço de pagamento."""
+    
+    def post(self, request, *args, **kwargs):
+        # Extrair o endpoint específico do path
+        path = request.path.replace('/api/payments', '')
+        
+        data, status_code = ServiceClient.forward_request(
+            service_name='PAYMENT',
+            path=f"/api{path}",
+            method='POST',
+            data=request.data,
+            headers=self._get_headers(request)
+        )
+        
+        return Response(data=data, status=status_code)
+    
+    def get(self, request, *args, **kwargs):
+        # Lógica similar para GET requests
+        path = request.path.replace('/api/payments', '')
+        
+        data, status_code = ServiceClient.forward_request(
+            service_name='PAYMENT',
+            path=f"/api{path}",
+            method='GET',
+            headers=self._get_headers(request)
+        )
+        
+        return Response(data=data, status=status_code)
+        
+    def _get_headers(self, request):
+        """Extrair cabeçalhos relevantes da requisição original."""
+        headers = {}
+        if 'Authorization' in request.headers:
+            headers['Authorization'] = request.headers['Authorization']
+        return headers

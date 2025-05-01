@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,9 +40,13 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
+    'product',
+    'corsheaders',
+    'payment',
 ]
 
 MIDDLEWARE = [
+    'product.middleqare.JWTUserMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -125,3 +130,22 @@ STATIC_URL = '/static/'
 # https://docs.djangoproject.com/en/3.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Configurações do microserviço de autenticação
+AUTH_SERVICE_URL = os.environ.get('AUTH_SERVICE_URL', 'http://auth-microservice-url')
+AUTH_VALIDATE_TOKEN_ENDPOINT = f"{AUTH_SERVICE_URL}/api/auth/token/validate"
+
+# Configurações dos gateways de pagamento
+# Stripe (cartão de crédito)
+STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY', '')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY', '')
+STRIPE_WEBHOOK_SECRET = os.environ.get('STRIPE_WEBHOOK_SECRET', '')
+
+# MercadoPago (PIX)
+MERCADOPAGO_PUBLIC_KEY = os.environ.get('MERCADOPAGO_PUBLIC_KEY', '')
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get('MERCADOPAGO_ACCESS_TOKEN', '')
+MERCADOPAGO_USER_ID = os.environ.get('MERCADOPAGO_USER_ID', '')
+
+# PagHiper (Boleto)
+PAGHIPER_API_KEY = os.environ.get('PAGHIPER_API_KEY', '')
+PAGHIPER_TOKEN = os.environ.get('PAGHIPER_TOKEN', '')

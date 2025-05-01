@@ -20,20 +20,21 @@ class RegisterView(generics.CreateAPIView):
     serializer_class = UserSerializer
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        serializer = self.get_serializer(data=request.data) # Serializer recebe os dados JSON vindos do request
+        serializer.is_valid(raise_exception=True) # Valida os dados
         
         # Criptografando a senha antes de salvar
-        password = serializer.validated_data.pop('password', None)
+        password = serializer.validated_data.pop('password', None) # Apaga a senha do dicionário mas antes de remove-la ele retorna seu valor
         if password:
-            serializer.validated_data['password'] = make_password(password)
+            serializer.validated_data['password'] = make_password(password) # Cripgrafa a senha
             
-        self.perform_create(serializer)
-        
+        self.perform_create(serializer) # Salva o usuário no banco de dados
+
         # Gerando tokens para o novo usuário
-        user = serializer.instance
-        refresh = RefreshToken.for_user(user)
+        user = serializer.instance # Obtém a referência ao objeto de usuário já criado no banco de dados
+        refresh = RefreshToken.for_user(user) # Cria um token para o usuário
         
+        # Cria o a resposta JSON vai ser enviado ao cliente
         response_data = {
             'user': serializer.data,
             'refresh': str(refresh),
@@ -49,14 +50,24 @@ class LoginView(TokenObtainPairView):
     para personalizar o comportamento
     """
     
+    """
+        Atualiza os dados da requisição para incluir o IP do usuário
+        e adiciona informações extras na resposta.
+        - Adiciona o ID do usuário e o email na resposta.
+        - Registra o IP do usuário no campo last_login_ip.
+        - O IP é obtido do cabeçalho HTTP_X_FORWARDED_FOR ou do REMOTE_ADDR.
+        - O IP é salvo no banco de dados.   
+    """
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         
         if response.status_code == status.HTTP_200_OK:
             # Adicionando informações extras na resposta
-            user = User.objects.get(email=request.data['email'])
+            user = User.objects.get(username=request.data['username']) # Obtendo o usuário pelo username
             response.data['user_id'] = str(user.id)
             response.data['email'] = user.email
+            response.data['username'] = user.username
+            response.data['first_name'] = user.first_name
             
             # Registrando login
             if 'HTTP_X_FORWARDED_FOR' in request.META:
@@ -74,18 +85,29 @@ class LogoutView(APIView):
     """
     View para logout de usuários
     """
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.IsAuthenticated,)  # Apenas usuários autenticados podem fazer logout
     
     def post(self, request):
         try:
+            # Tenta obter o token de refresh enviado no corpo da requisição
             refresh_token = request.data.get('refresh')
             if refresh_token:
+                # Converte a string do token em um objeto RefreshToken
+                # Isso valida o formato e assinatura do token
                 token = RefreshToken(refresh_token)
+                
+                # Adiciona o token à blacklist para invalidá-lo imediatamente
+                # Mesmo que ainda não tenha expirado, não poderá mais ser usado
                 token.blacklist()
+                
+                # Retorna uma mensagem de sucesso ao cliente
                 return Response({"message": "Logout realizado com sucesso"}, status=status.HTTP_200_OK)
             else:
+                # Se o token não foi fornecido na requisição, retorna erro
                 return Response({"error": "Token de refresh não fornecido"}, status=status.HTTP_400_BAD_REQUEST)
         except TokenError as e:
+            # Captura erros relacionados ao token (formato inválido, expirado, etc.)
+            # e retorna uma mensagem de erro com o detalhe do problema
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 

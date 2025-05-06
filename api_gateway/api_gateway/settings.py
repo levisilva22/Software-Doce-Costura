@@ -67,7 +67,39 @@ REST_FRAMEWORK = {
 }
 
 # Configurações de CORS para desenvolvimento
-CORS_ALLOW_ALL_ORIGINS = True 
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Frontend em desenvolvimento
+    "http://localhost:8080",  # Outra porta possível para desenvolvimento
+    "http://frontend",        # Nome do serviço no Docker Compose
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_EXPOSE_HEADERS = [
+    'content-disposition',
+]
+
+CORS_ALLOW_CREDENTIALS = True
 
 # Configuração dos serviços
 MICROSERVICE_URLS = {

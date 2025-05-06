@@ -60,7 +60,7 @@ class User(AbstractUser):
     preferences = models.JSONField(default=dict, blank=True)
     
     # Configure o username como o campo para login
-    USERNAME_FIELD = 'username'
+    USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
     objects = CustomUserManager()

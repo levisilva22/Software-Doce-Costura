@@ -63,7 +63,7 @@ class LoginView(TokenObtainPairView):
         
         if response.status_code == status.HTTP_200_OK:
             # Adicionando informações extras na resposta
-            user = User.objects.get(username=request.data['username']) # Obtendo o usuário pelo username
+            user = User.objects.get(email=request.data['email']) # Obtendo o usuário pelo email
             response.data['user_id'] = str(user.id)
             response.data['email'] = user.email
             response.data['username'] = user.username

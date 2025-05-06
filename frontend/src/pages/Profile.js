@@ -1,4 +1,5 @@
 // Crie este arquivo em /home/levi/E-commerce/frontend/src/pages/Profile.js
+// eslint-disable-next-line no-unused-vars
 import React from 'react';
 import { Container, Typography, Box, Paper, Grid, Button } from '@mui/material';
 

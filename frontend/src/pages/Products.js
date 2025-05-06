@@ -23,8 +23,9 @@ import { getTrendingProducts, getNewArrivals, getPersonalizedRecommendations } f
 import ProductCard from '../components/ProductCard';
 
 function Products() {
+// eslint-disable-next-line no-unused-vars
   // Hook de navegação
-  const navigate = useNavigate();
+  // const navigate = useNavigate(); // Comentado por não estar sendo usado
   
   // Hooks de contexto
   const { isAuthenticated, user } = useAuth();

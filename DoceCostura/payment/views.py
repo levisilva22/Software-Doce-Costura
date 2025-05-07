@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Order, Payment
+from .models import Order, Payment, OrderItem
 from .serializers import OrderSerializer, PaymentSerializer, CheckoutSerializer
 from .services import PaymentService
 from product.permissions import MicroservicePermission

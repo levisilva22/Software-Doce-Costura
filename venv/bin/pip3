@@ -1,4 +1,4 @@
-#!/home/levi/E-commerce/venv/bin/python
+#!/home/levi/Documentos/E-commerce/venv/bin/python3.12
 # -*- coding: utf-8 -*-
 import re
 import sys

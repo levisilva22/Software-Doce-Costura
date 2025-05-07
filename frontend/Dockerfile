@@ -1,14 +1,21 @@
 FROM node:20-alpine as build
-
-# Diretório de trabalho dentro do container
 WORKDIR /app
 
-# Copia os arquivos de configuração de pacotes
-COPY package.json package-lock.json ./
+# Copie apenas os arquivos de dependências primeiro
+COPY package*.json ./
+RUN npm install
 
+# Depois copie o restante dos arquivos
+COPY public ./public
+COPY src ./src
+COPY .env* ./
 
-COPY . .
+# Construa o aplicativo
+RUN npm run build
 
-EXPOSE 3000
-
-CMD ["npm", "start"]
+# Imagem de produção
+FROM nginx:alpine
+COPY --from=build /app/build /usr/share/nginx/html
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

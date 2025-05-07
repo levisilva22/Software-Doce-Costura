@@ -7,3 +7,5 @@ requests==2.31.0
 python-dotenv==1.0.0
 psycopg2-binary==2.9.9
 gunicorn==21.2.0
+django-filter==23.5  # ou a versão que preferirstripe==6.7.0
+stripe==6.7.0

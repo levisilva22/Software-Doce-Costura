@@ -2,13 +2,18 @@ version: '3.8'
 
 services:
   frontend:
-    build: ./frontend
+    build: 
+      context: ./frontend
+      dockerfile: Dockerfile
     container_name: frontend
     ports:
-      - "3000:80"  # Mapeia a porta 3000 do host para a porta 80 do container
+      - "3000:80"
     environment:
       - REACT_APP_API_URL=http://localhost:8000/api
-    restart: always
+      - BROWSER=none
+      - DANGEROUSLY_DISABLE_HOST_CHECK=true
+      - WDS_SOCKET_PORT=0
+    restart: unless-stopped
     networks:
       - public_network
     depends_on:

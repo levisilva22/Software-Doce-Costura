@@ -8,7 +8,7 @@ from .views import (
 
 router = DefaultRouter()
 router.register('categories', CategoryViewSet, basename='categories')
-router.register('product', ProductViewSet, basename='product')
+router.register('', ProductViewSet, basename='product')
 router.register('cart', CartViewSet, basename='cart')
 
 urlpatterns = [

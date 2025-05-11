@@ -43,8 +43,8 @@ class User(AbstractUser):
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = models.CharField(max_length=150, unique=True, null=True, blank=True)
-    first_name = models.CharField(max_length=30, blank=False, null=False)
-    last_name = models.CharField(max_length=150, blank=False, null=False)
+    first_name = models.CharField(max_length=30, blank=True, null=True)
+    last_name = models.CharField(max_length=150, blank=True, null=True)
     email = models.EmailField(_('email address'), unique=True)
     phone_number = models.CharField(max_length=15, blank=True, null=True)
     

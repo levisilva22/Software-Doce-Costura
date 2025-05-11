@@ -1,7 +1,7 @@
 FROM python:3.10-slim
 
 # Configurar diretório de trabalho
-WORKDIR /DoceCostura
+WORKDIR /app
 
 # Configurações Python
 ENV PYTHONDONTWRITEBYTECODE=1

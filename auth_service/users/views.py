@@ -37,6 +37,7 @@ class RegisterView(generics.CreateAPIView):
         # Cria o a resposta JSON vai ser enviado ao cliente
         response_data = {
             'user': serializer.data,
+            'email': serializer.validated_data['email'],
             'refresh': str(refresh),
             'access': str(refresh.access_token),
         }

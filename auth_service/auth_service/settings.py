@@ -27,7 +27,11 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-=)f#yei$iz^i(_
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '.localhost',
+    'auth_service',
+    '127.0.0.1',
+]
 
 
 # Application definition
@@ -38,8 +42,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'corsheaders', 
+    'django.contrib.staticfiles', 
     'rest_framework',
     'users',
     'rest_framework_simplejwt.token_blacklist',  # Para blacklisting de tokens
@@ -157,3 +160,4 @@ SIMPLE_JWT = {
 }
 
 AUTH_USER_MODEL = 'users.User'
+

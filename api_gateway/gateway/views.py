@@ -2,6 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
 from .services import ServiceClient
+from django.conf import settings
+import requests
+import logging
+
+logger = logging.getLogger(__name__)
 
 class AuthProxyView(APIView):
     """View para encaminhar requisições ao serviço de autenticação."""
@@ -9,18 +14,32 @@ class AuthProxyView(APIView):
     permission_classes = []  # Permitir acesso não autenticado para login/registro
     
     def post(self, request, *args, **kwargs):
-        # Extrair o endpoint específico do path
         path = request.path.replace('/api/auth', '')
         
-        data, status_code = ServiceClient.forward_request(
-            service_name='AUTH',
-            path=f"/api{path}",
-            method='POST',
-            data=request.data,
-            headers=self._get_headers(request)
-        )
+        # Log para debug
+        logger.info(f"Encaminhando requisição para AUTH: {path}")
         
-        return Response(data=data, status=status_code)
+
+        try:
+            # Encaminha a requisição ao serviço de autenticação
+            data, status_code = ServiceClient.forward_request(
+                service_name='AUTH',
+                path=path,
+                method='POST',
+                data=request.data,
+                headers=self._get_headers(request)
+            )
+            
+            # Muito importante: Manter o código de status original para que o cliente
+            # receba os erros de validação corretamente
+            return Response(data=data, status=status_code)
+            
+        except Exception as e:
+            logger.error(f"Erro ao encaminhar requisição para AUTH: {str(e)}")
+            return Response(
+                {"error": "Erro de comunicação com o serviço de autenticação"},
+                status=500
+            )
         
     def _get_headers(self, request):
         """Extrair cabeçalhos relevantes da requisição original."""
@@ -32,14 +51,14 @@ class AuthProxyView(APIView):
 
 class RecommendationView(APIView):
     """View para encaminhar requisições ao serviço de recomendação."""
+   
     
     def get(self, request, *args, **kwargs):
-        # Extrair o endpoint específico do path
         path = request.path.replace('/api/recommendations', '')
         
         data, status_code = ServiceClient.forward_request(
             service_name='RECOMMENDATION',
-            path=f"/api{path}",
+            path=path,
             method='GET',
             headers=self._get_headers(request),
             params=request.query_params
@@ -58,12 +77,16 @@ class RecommendationView(APIView):
 class ProductsView(APIView):
     """View para encaminhar requisições ao serviço principal (produtos)."""
     
+    permission_classes = []  # Permitir acesso não autenticado
+    
     def get(self, request, *args, **kwargs):
         path = request.path.replace('/api/products', '')
+         
         
+        # Passar os parâmetros de consulta
         data, status_code = ServiceClient.forward_request(
             service_name='MAIN',
-            path=f"/api{path}",
+            path=path,  # Usar o caminho correto para o serviço principal
             method='GET',
             headers=self._get_headers(request),
             params=request.query_params
@@ -76,7 +99,7 @@ class ProductsView(APIView):
         
         data, status_code = ServiceClient.forward_request(
             service_name='MAIN',
-            path=f"/api{path}",
+            path=path,
             method='POST',
             data=request.data,
             headers=self._get_headers(request)
@@ -100,7 +123,7 @@ class PaymentProxyView(APIView):
         
         data, status_code = ServiceClient.forward_request(
             service_name='PAYMENT',
-            path=f"/api{path}",
+            path=path,
             method='POST',
             data=request.data,
             headers=self._get_headers(request)
@@ -114,7 +137,7 @@ class PaymentProxyView(APIView):
         
         data, status_code = ServiceClient.forward_request(
             service_name='PAYMENT',
-            path=f"/api{path}",
+            path=path,
             method='GET',
             headers=self._get_headers(request)
         )

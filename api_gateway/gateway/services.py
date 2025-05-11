@@ -1,4 +1,3 @@
-
 import requests
 from django.conf import settings
 import logging
@@ -33,7 +32,11 @@ class ServiceClient:
             return {"error": "Service not configured"}, 500
             
         url = f"{service_url}{path}"
+        logger.info(f"Enviando requisição para: {url}")
         
+        print(f"DEBUG: ENviando requisição para {url}")
+        print(f"DEBUG: urls do serviço {service_url}")
+
         try:
             response = requests.request(
                 method=method,
@@ -43,7 +46,18 @@ class ServiceClient:
                 params=params
             )
             
-            return response.json(), response.status_code
+            # Tentar obter a resposta JSON
+            try:
+                return response.json(), response.status_code
+            except ValueError:
+                # Se não for JSON, verificar se é um erro
+                if response.status_code >= 400:
+                    return {
+                        "error": "Resposta inválida do serviço",
+                        "message": response.text
+                    }, response.status_code
+                else:
+                    return {"message": response.text}, response.status_code
             
         except requests.RequestException as e:
             logger.error(f"Erro ao comunicar com o serviço {service_name}: {str(e)}")

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import viewsets, filters, status
+from rest_framework import viewsets, filters, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,6 +11,18 @@ from .serializers import (
     CategorySerializer,
     CartSerializer
 )
+
+# Permissão personalizada para permitir apenas superusuários
+class IsSuperUserOrMicroservice(permissions.BasePermission):
+    def has_permission(self, request, view):
+        # Permitir superusuários do Django
+        if request.user and request.user.is_authenticated and request.user.is_superuser:
+            return True
+        # Manter compatibilidade com o middleware JWT se necessário
+        if hasattr(request, 'user_data'):
+            roles = request.user_data.get('roles', [])
+            return 'is_superuser' in roles
+        return False
 
 class CategoryViewSet(viewsets.ModelViewSet):
     """
@@ -31,7 +43,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     """
     queryset = Product.objects.filter(is_active=True)
     serializer_class = ProductSerializer
-    permission_classes = [MicroservicePermission]
+    permission_classes = [IsSuperUserOrMicroservice]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'is_featured']
     search_fields = ['name', 'description', 'sku']
@@ -51,16 +63,32 @@ class ProductViewSet(viewsets.ModelViewSet):
         """
         Adiciona o ID do criador ao produto quando é criado.
         """
-        # Em um microserviço real, este ID viria do token JWT
-        # Por enquanto, vamos usar um valor fixo para teste
-        creator_id = self.request.user_data.get('id', 1)
+        # Para super usuários do Django, use o ID do usuário
+        if self.request.user and self.request.user.is_authenticated:
+            creator_id = self.request.user.id
+        # Fallback para user_data se disponível (compatibilidade com middleware JWT)
+        elif hasattr(self.request, 'user_data'):
+            creator_id = self.request.user_data.get('id', 1)
+        else:
+            # Valor padrão para testes ou quando não há autenticação
+            creator_id = 1
+            
         serializer.save(creator_id=creator_id)
     
     def perform_update(self, serializer):
         """
         Adiciona o ID do último modificador quando o produto é atualizado.
         """
-        modifier_id = self.request.user_data.get('id', 1)  # Valor padrão 1 para testes
+        # Para super usuários do Django, use o ID do usuário
+        if self.request.user and self.request.user.is_authenticated:
+            modifier_id = self.request.user.id
+        # Fallback para user_data se disponível (compatibilidade com middleware JWT)
+        elif hasattr(self.request, 'user_data'):
+            modifier_id = self.request.user_data.get('id', 1)
+        else:
+            # Valor padrão para testes ou quando não há autenticação
+            modifier_id = 1
+            
         serializer.save(last_modified_by=modifier_id)
     
     @action(detail=True, methods=['post'])
@@ -117,17 +145,12 @@ class ProductViewSet(viewsets.ModelViewSet):
     def update_stock(self, request, pk=None):
         """
         Endpoint para atualizar o estoque de um produto.
-        Requer autenticação.
+        Requer autenticação de superusuário.
         """
         product = self.get_object()
         quantity = request.data.get('quantity', 0)
-
-        roles = request.user_data.get('roles', [])
-
-        if 'is_superuser' not in roles:
-            return Response({'error': 'Apenas administradores podem atualizar o estoque'},
-                            status = status.HTTP_403_FORBIDDEN) 
         
+        # Verificação simplificada - já verificado pela permissão da classe
         if not isinstance(quantity, int):
             return Response(
                 {'error': 'A quantidade deve ser um número inteiro'},

@@ -7,7 +7,7 @@ router = DefaultRouter()
 router.register(r'products', ProductViewSet)
 router.register(r'users', UserProfileViewSet)
 router.register(r'interactions', UserInteractionViewSet)
-router.register(r'recommendations', RecommendationViewSet)
+router.register(r'', RecommendationViewSet)
 
 # URLs da API
 urlpatterns = [

@@ -40,13 +40,14 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'django_filters',
-    'product',
     'corsheaders',
+    'product',
     'payment',
 ]
 
 MIDDLEWARE = [
-    'product.middleqare.JWTUserMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
+    'product.middleware.JWTUserMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -132,7 +133,7 @@ STATIC_URL = '/static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configurações do microserviço de autenticação
-AUTH_SERVICE_URL = os.environ.get('AUTH_SERVICE_URL', 'http://auth-microservice-url')
+AUTH_SERVICE_URL = os.environ.get('AUTH_SERVICE_URL', 'http://auth_service:8000/api/auth')
 AUTH_VALIDATE_TOKEN_ENDPOINT = f"{AUTH_SERVICE_URL}/api/auth/token/validate"
 
 # Configurações dos gateways de pagamento
@@ -149,3 +150,13 @@ MERCADOPAGO_USER_ID = os.environ.get('MERCADOPAGO_USER_ID', '')
 # PagHiper (Boleto)
 PAGHIPER_API_KEY = os.environ.get('PAGHIPER_API_KEY', '')
 PAGHIPER_TOKEN = os.environ.get('PAGHIPER_TOKEN', '')
+
+# Configurações CORS
+CORS_ALLOW_ALL_ORIGINS = True  # Apenas para desenvolvimento!
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "http://frontend:3000",
+    "http://api_gateway:8000",
+]

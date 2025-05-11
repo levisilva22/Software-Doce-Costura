@@ -11,16 +11,15 @@ urlpatterns = [
     re_path(r'^auth/verify/?$', AuthProxyView.as_view()),  # Verifica o token de autenticação
 
     # Rotas de recomendação
-    re_path(r'^recommendations/?$', RecommendationView.as_view()),
+    re_path(r'^recommendations/(?P<path>.*)$', RecommendationView.as_view()),
     re_path(r'^recommendations/(?P<user_id>\d+)/?$', RecommendationView.as_view()),
-    
+
     # Rotas de produtos
     re_path(r'^products/?$', ProductsView.as_view()),
     re_path(r'^products/(?P<product_id>\d+)/?$', ProductsView.as_view()),
     re_path(r'^products/categories/?$', ProductsView.as_view()),
     re_path(r'^products/product/?$', ProductsView.as_view()),
 
-    re_path(r'payment/?$', PaymentProxyView.as_view()),
-    re_path(r'productos/orders/?$', PaymentProxyView.as_view()),
+    re_path(r'payment/(?P<path>.*)$', PaymentProxyView.as_view()),
 
-]   
+]

@@ -25,11 +25,17 @@ SECRET_KEY = 'django-insecure-6v+*ma+8(7h*-u%a!6!9^kw=lije3^6fd(=(5@vb%brss4bb*y
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    'ip172-18-0-7-d0dmdga91nsg00e28mi0-8000.direct.labs.play-with-docker.com'
+ALLOWED_HOSTS = ['8000','localhost']
+
+# Configurações de CORS para desenvolvimento
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
 ]
+
+CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://localhost:8000']
 
 # Application definition
 
@@ -39,10 +45,8 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework', 
+    'django.contrib.staticfiles', 
     'corsheaders',
-    'rest_framework_simplejwt',
     'gateway',  
 ]
 
@@ -59,59 +63,24 @@ MIDDLEWARE = [
 
 # Configurações do REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10
+    'DEFAULT_RENDER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ]
 }
-
-# Configurações de CORS para desenvolvimento
-CORS_ALLOW_ALL_ORIGINS = False
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Frontend em desenvolvimento
-    "http://localhost:8080",  # Outra porta possível para desenvolvimento
-    "http://frontend",        # Nome do serviço no Docker Compose
-]
-
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-CORS_EXPOSE_HEADERS = [
-    'content-disposition',
-]
-
-CORS_ALLOW_CREDENTIALS = True
 
 # Configuração dos serviços
 MICROSERVICE_URLS = {
-    'AUTH': 'http://localhost:8001',
-    'RECOMMENDATION': 'http://localhost:8002',
-    'MAIN': 'http://localhost:8003',
+    'AUTH': 'http://auth_service:8000/api/auth',
+    'RECOMMENDATION': 'http://recommendation_service:8000/api/recommendations',
+    'MAIN': 'http://main_service:8000/api/products',
 }
 
+# Timeout para requisições aos microserviços (em segundos)
+SERVICE_TIMEOUT = 5
+
 ROOT_URLCONF = 'api_gateway.urls'
+
+APPEND_SLASH = True
 
 TEMPLATES = [
     {

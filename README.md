@@ -17,7 +17,7 @@ Este repositório contém o código fonte do projeto E-commerce Doce Costura, um
 - JWT: Autenticação baseada em tokens
 - Infraestrutura
 
-# Como utilizar instalar e executar
+# Como utilizar, instalar e executar
 Para instalar é necessário ter o docker e o docker-comopose pre-instalados
 - [Docker](https://www.docker.com/get-started)
 - [Docker Compose](https://docs.docker.com/compose/install/)
